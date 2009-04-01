@@ -49,9 +49,25 @@ App tempaltes.
 
     media/
     
-App media (maybe, there is that whole deal of )
+App media (maybe, there is that whole deal of serving this stuff up from the dev server)
 
     script/manage
     
 The usual manage.py created from `django-admin startproject`, but tweaked to deal with it's location.
 
+
+Future
+======
+
+What I'd like eventually, but you can't do now:
+
+  gig --unpack --django-version=trunk
+  # Buildout with django module from svn trunk unpacked to lib/
+  
+  gig --unpack --django-version=branches/schema-evolution
+  # As above, but with the branch
+  
+  gig --unpack --latest
+  # Fetch/unpack latest release from djangoproject.com
+  
+That's all I'm looking for really.
