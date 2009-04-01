@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# 
+# TODO:
+#   Should probably consider refactoring a bit.
+#   Fetch-from-svn ability
+#   Local cache of django downloads
+#   Using existing django install
+#   ... anything further probably warrants using zc.buidout or something like that
 """
 This script aims at providing a simple way to bootstrap a self-contained django project.
 
@@ -62,46 +69,28 @@ import sys, os, stat
 import urllib
 import tarfile
 import tempfile
+import fileinput
+
 
 from optparse import OptionParser
 
-parser = OptionParser()
-
-parser.add_option("-u", "--unpack", 
-    action="store_true", dest="unpack", default=False,
-    help="IGNORED - Unpack django to lib/")
-                
-parser.add_option("-V", "--django-version",
-    action="store", dest="django_version", default=True,
-    help="Django version to use.  This will be downloaded. Non-version numbers will be interpreted from the django svn repository")
-
-parser.add_option("-f", "--file",
-    action="store", type="string", dest="filename")
-                
-parser.add_option("-q", "--quiet",
-    action="store_false", dest="verbose", default=True,
-    help="don't print status messages to stdout")
-
-parser.parse_args()
-
-django_version="1.0.2"
-
-django_url = 'http://media.djangoproject.com/releases/%s/Django-%s-final.tar.gz' % (django_version, django_version)
-#django_url = 'http://localhost/~tvon/Django-%s-final.tar.gz' % django_version
-
+def pfile(s):
+    """Shortcut for getting full file paths"""
+    return "%s/%s" % (pdir, s)
+    
 def log(s):
     "This will at some point be more useful..."
-    print s
+    if options.verbose:
+        print s
 
 def buildTree():
-    global projectname
-    makeFolder(projectname)
-    makeFolder('%s/lib' % projectname)
-    makeFolder('%s/config' % projectname)
-    makeFolder('%s/config/settings' % projectname)
-    makeFolder('%s/templates' % projectname)
-    makeFolder('%s/media' % projectname)
-    makeFolder('%s/script' % projectname)
+    makeFolder(pname)
+    makeFolder(pfile('lib'))
+    makeFolder(pfile('config'))
+    makeFolder(pfile('config/settings'))
+    makeFolder(pfile('templates'))
+    makeFolder(pfile('media'))
+    makeFolder(pfile('script'))
 
 def makeFolder(path):
     "TODO: check if folder exists, report accordingly"
@@ -117,7 +106,6 @@ def copyToLib(url):
     return f[0]
 
 def installDjagno():
-    global projectname, django_url, django_version
     
     log("fetching %s" % django_url)
     
@@ -128,12 +116,12 @@ def installDjagno():
     tempdir = tempfile.mkdtemp()
     
     # FIXME
-    log("extracting Django-%s.tar.gz" % django_version)    
+    log("extracting Django-%s.tar.gz" % djver)    
     tar.extractall(tempdir)
     
     # FIXME
-    log ("moving Django-%s/django to project/lib/django" % django_version)
-    os.rename('%s/Django-%s-final/django' % (tempdir, django_version), '%s/lib/django' % projectname)
+    log ("moving Django-%s/django to project/lib/django" % djver)
+    os.rename('%s/Django-%s-final/django' % (tempdir, djver), '%s/lib/django' % pname)
     
     tar.close()
     
@@ -141,7 +129,6 @@ def installDjagno():
     
 
 def makeManageScript():
-    global projectname
     
     script = """#!/usr/bin/env python 
 # TODO: non-standard pythons installs
@@ -158,7 +145,7 @@ from django.core.management import execute_manager
 
 try:
     # TODO: import non-base config, eg 'hostname' or 'development'
-    from settings import base as settings
+    from settings import development as settings
 except ImportError:
     import sys
     sys.stderr.write("Error: Can't import settings")
@@ -168,8 +155,8 @@ if __name__ == "__main__":
     execute_manager(settings)
 
 
-"""
-    filename = '%s/script/manage.py' % projectname
+    """
+    filename = pfile('script/manage.py')
     f = open(filename, 'w')
     f.write(script)
     f.close()
@@ -180,34 +167,115 @@ if __name__ == "__main__":
     os.chmod(filename, permissions)
     
 
+def customizeProject():
+    
+    settings_file = pfile('config/settings/development.py')
+    
+    settings = """
+from base import *
+
+DATABASE_ENGINE = 'sqlite3'    # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+DATABASE_NAME = 'devel.db'     # Or path to database file if using sqlite3.
+
+MEDIA_ROOT = "%(media_root)s"
+
+TEMPLATE_DIRS = (
+    "%(templates)s",
+)
+
+    """ % {'templates': pfile('templates/'), 'media_root': pfile('media/')}
+
+    f = open(settings_file, "w")
+    f.write(settings)
+    f.close()
+    
+def customizeDefaultSettings():
+    
+    manipFile(
+        pfile('config/settings/base.py'), 
+        lambda s: s.replace("ROOT_URLCONF = '%s.urls'" % pname, "ROOT_URLCONF = 'urls'")
+        )
+            
+    
 def setupProjectFiles():
-    global projectname
     
     from django.core import management
-    management.base.copy_helper(None, 'project', projectname, projectname)
+    management.base.copy_helper(None, 'project', pname, pname)
     
-    os.unlink('%s/%s/manage.py' % (projectname, projectname))
-    os.unlink('%s/%s/__init__.py' % (projectname, projectname))
+    os.unlink('%s/%s/manage.py' % (pname, pname))
+    os.unlink('%s/%s/__init__.py' % (pname, pname))
     
-    os.rename('%s/%s/settings.py' % (projectname, projectname), '%s/config/settings/base.py' % projectname)
-    os.rename('%s/%s/urls.py' % (projectname, projectname), '%s/config/urls.py' % projectname)
+    os.rename('%s/%s/settings.py' % (pname, pname), '%s/config/settings/base.py' % pname)
+    os.rename('%s/%s/urls.py' % (pname, pname), '%s/config/urls.py' % pname)
     
-    os.rmdir('%s/%s' % (projectname, projectname))
+    os.rmdir('%s/%s' % (pname, pname))
     
     # Make config/settings/ a module
-    f = open('%s/config/settings/__init__.py' % projectname, 'w')
+    f = open( pfile('config/settings/__init__.py'), 'w')
     f.write('#\n')
     f.close()
 
+def manipFile(filename, method):
+    "Run supplied method over each line in the file, saving result over original file"
+    f = open(filename, 'r+')
+    out = []
+    for line in f:
+        out.append( method(line) )
+    
+    f.seek(0)
+    f.writelines(out)
+    f.close()
+    
+    
+#############################################################################
+# Option Parsing
+#############################################################################
 
-#### The goods ####
+parser = OptionParser()
 
-projectname = sys.argv[1]
+parser.add_option("-u", "--unpack", 
+    action="store_true", dest="unpack", default=False,
+    help="IGNORED - Unpack django to lib/")
+                
+parser.add_option("-V", "--django-version",
+    action="store", dest="django_version", default="1.0.2",
+    help="Django version to use.  This will be downloaded. Non-version numbers will be interpreted from the django svn repository")
+
+parser.add_option("-f", "--file",
+    action="store", type="string", dest="filename")
+                
+parser.add_option("-q", "--quiet",
+    action="store_false", dest="verbose", default=True,
+    help="don't print status messages to stdout")
+
+
+(options, args) = parser.parse_args()
+
+#############################################################################
+# The Procedural Bits
+#############################################################################
+
+pname = os.path.basename(args[0])
+djver = options.django_version
+
+# FIXME: Only works when creating project in cwd!
+pdir = os.path.normpath( "%s/%s" % (os.getcwd(), pname))
+
+# Meh, how to get cwd?
+#pdir = os.path.normpath (os.path.split( os.path.abspath( sys.argv[0]) )[0] )
+
+
+django_url = 'http://media.djangoproject.com/releases/%s/Django-%s-final.tar.gz' % (djver, djver)
+#django_url = 'http://localhost/~tvon/Django-%s-final.tar.gz' % djver
+
 buildTree()
 installDjagno()
 makeManageScript()
+customizeProject()
+
 
 # Django should be available now...
-sys.path[1:1] = [os.path.abspath('%s/lib/' % projectname)]
+sys.path[1:1] = [pfile('lib/')]
 import django
 setupProjectFiles()
+customizeDefaultSettings()
