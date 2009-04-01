@@ -224,6 +224,7 @@ def manipFile(filename, method):
     
     f.seek(0)
     f.writelines(out)
+    f.truncate()
     f.close()
     
     
