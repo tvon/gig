@@ -63,6 +63,26 @@ import urllib
 import tarfile
 import tempfile
 
+from optparse import OptionParser
+
+parser = OptionParser()
+
+parser.add_option("-u", "--unpack", 
+    action="store_true", dest="unpack", default=False,
+    help="IGNORED - Unpack django to lib/")
+                
+parser.add_option("-V", "--django-version",
+    action="store", dest="django_version", default=True,
+    help="Django version to use.  This will be downloaded. Non-version numbers will be interpreted from the django svn repository")
+
+parser.add_option("-f", "--file",
+    action="store", type="string", dest="filename")
+                
+parser.add_option("-q", "--quiet",
+    action="store_false", dest="verbose", default=True,
+    help="don't print status messages to stdout")
+
+parser.parse_args()
 
 django_version="1.0.2"
 
@@ -97,9 +117,9 @@ def copyToLib(url):
     return f[0]
 
 def installDjagno():
-    global projectname, django_url
+    global projectname, django_url, django_version
     
-    log("fetching Django-xxx")
+    log("fetching %s" % django_url)
     
     filename = copyToLib(django_url)
     
@@ -108,13 +128,12 @@ def installDjagno():
     tempdir = tempfile.mkdtemp()
     
     # FIXME
-    log("extracting Django-xxx")    
+    log("extracting Django-%s.tar.gz" % django_version)    
     tar.extractall(tempdir)
     
     # FIXME
-    log ("moving django-xxx/django to project/lib/django")
-    os.rename('%s/Django-1.0.2-final/django' % tempdir, '%s/lib/django' % projectname)
-    
+    log ("moving Django-%s/django to project/lib/django" % django_version)
+    os.rename('%s/Django-%s-final/django' % (tempdir, django_version), '%s/lib/django' % projectname)
     
     tar.close()
     
