@@ -1,0 +1,57 @@
+This script aims at providing a simple way to bootstrap a self-contained django project.
+
+In short, it makes a few trivial decisions for you.
+
+To those who use the Django framework this may seem a bit unecessary, but I believe that
+it could be easier to get started with django, without having to impose minor decisions 
+on new users such as where to place templates and basic media files.
+
+    $ gig myproject
+    
+Will create:
+
+    myproject/
+        lib/
+        lib/django/
+        config/__init__.py
+        config/urls.py
+        config/settings/
+        config/settings/__init__.py
+        config/settings/base.py
+        templates/
+        media/
+        script/
+        script/manage
+        
+
+A bit about this layout.
+
+    lib/
+    
+This is added to PYTHONPATH, so any new apps should go in here, as well as any existing 
+django apps you might want to use
+
+    config/
+
+The project-wide config files (what `startproject` would typically generate, mostly).  Of
+note are `urls.py` and...
+
+    config/settings/
+    
+This is a module hoding `base.py`, used as the general config, and any host-specific configs.
+For example, on my home machine I might have `config/settings/home.py` with paths specific to 
+that setup, while at work I might have `config/settings/office.py`.  Or development and production
+configs, of course.  Basically the same deal as Rails environments.
+
+    templates/
+
+App tempaltes.
+
+    media/
+    
+App media (maybe, there is that whole deal of )
+
+    script/manage
+    
+The usual manage.py created from `django-admin startproject`, but tweaked to deal with it's location.
+
