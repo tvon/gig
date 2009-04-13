@@ -1,15 +1,32 @@
 #!/usr/bin/env python
 # 
 # TODO:
+#   Make 'script/manage startapp foo' buildout in the right place
 #   Should probably consider refactoring a bit.
 #   Fetch-from-svn ability
 #   Local cache of django downloads
 #   Using existing django install
 #   ... anything further probably warrants using zc.buidout or something like that
 """
-This script aims at providing a simple way to bootstrap a self-contained django project.
 
-In short, it makes a few trivial decisions for you.
+Note:
+
+ Make this a "suped-up" django-admin/manage script and copy it to the script/ folder when done?  This would mean:
+ * Adding a few commands, eg "app install" to install 3rd party apps into lib/
+ * Perhaps allowing system-wide gig to start individual instances
+ * Perhaps adding lib/gig which would include TTW based tools for managing installed apps.
+ 
+ 
+In short
+
+    $ curl -o gig http://github.com/tvon/gig/blah/blah
+    $ ./gig myproject
+    
+    
+XXXXXXXXXXXXXXXX
+    
+This is a script that will make a few trivial decisions for you while setting up a 
+pre-organized Django project tree.
 
 To those who use the Django framework this may seem a bit unecessary, but I believe that
 it could be easier to get started with django, without having to impose minor decisions 
@@ -27,12 +44,12 @@ Will create:
         config/settings/
         config/settings/__init__.py
         config/settings/base.py
+        config/settings/development.py
         templates/
         media/
         script/
         script/manage
         
-
 A bit about this layout.
 
     lib/
@@ -71,19 +88,24 @@ import tarfile
 import tempfile
 import fileinput
 
-
 from optparse import OptionParser
 
-def pfile(s):
+try:
+    import django
+except ImportError:
+    django = False
+
+
+def OFF_pfile(s):
     """Shortcut for getting full file paths"""
     return "%s/%s" % (pdir, s)
     
-def log(s):
+def OFF_log(s):
     "This will at some point be more useful..."
     if options.verbose:
         print s
 
-def buildTree():
+def OFF_buildTree():
     makeFolder(pname)
     makeFolder(pfile('lib'))
     makeFolder(pfile('config'))
@@ -92,7 +114,7 @@ def buildTree():
     makeFolder(pfile('media'))
     makeFolder(pfile('script'))
 
-def makeFolder(path):
+def OFF_makeFolder(path):
     "TODO: check if folder exists, report accordingly"
     log("creating: %s" % path)
     
@@ -101,32 +123,25 @@ def makeFolder(path):
     except OSError:
         log("...already exists")
 
-def copyToLib(url):
+def OFF_copyToLib(url):
     f = urllib.urlretrieve(url)
     return f[0]
 
-def installDjagno():
+def OFF_installDjagno():
     
-    log("fetching %s" % django_url)
-    
-    filename = copyToLib(django_url)
-    
-    tar = tarfile.open(filename, "r:gz")
-    
-    tempdir = tempfile.mkdtemp()
-    
-    # FIXME
-    log("extracting Django-%s.tar.gz" % djver)    
-    tar.extractall(tempdir)
-    
-    # FIXME
-    log ("moving Django-%s/django to project/lib/django" % djver)
-    os.rename('%s/Django-%s-final/django' % (tempdir, djver), '%s/lib/django' % pname)
-    
-    tar.close()
-    
-    # Erm, tempdir cleanup?
-    
+    if options.download:
+        log("fetching %s" % django_url)
+        filename = copyToLib(django_url)
+        tar = tarfile.open(filename, "r:gz")    
+        tempdir = tempfile.mkdtemp()
+        log("extracting Django-%s.tar.gz" % djver)    
+        tar.extractall(tempdir)
+        log ("moving Django-%s/django to project/lib/django" % djver)
+        os.rename('%s/Django-%s-final/django' % (tempdir, djver), '%s/lib/django' % pname)
+        tar.close()
+        # Erm, tempdir cleanup?
+    else:
+        log("No non-download option, sorry")
 
 def makeManageScript():
     
@@ -156,7 +171,7 @@ if __name__ == "__main__":
 
 
     """
-    filename = pfile('script/manage.py')
+    filename = '%s/script/manage.py' % basedir
     f = open(filename, 'w')
     f.write(script)
     f.close()
@@ -167,7 +182,7 @@ if __name__ == "__main__":
     os.chmod(filename, permissions)
     
 
-def customizeProject():
+def OFF_customizeProject():
     
     settings_file = pfile('config/settings/development.py')
     
@@ -189,15 +204,29 @@ TEMPLATE_DIRS = (
     f.write(settings)
     f.close()
     
-def customizeDefaultSettings():
+def OFF_customize():
     
+    # Clearly not the best way to do things
     manipFile(
         pfile('config/settings/base.py'), 
         lambda s: s.replace("ROOT_URLCONF = '%s.urls'" % pname, "ROOT_URLCONF = 'urls'")
         )
+    manipFile(
+        pfile('config/urls.py'),
+        lambda s: s.replace("# (r'^admin/", "(r'^admin/")
+        )
+    manipFile(
+        pfile('config/urls.py'),
+        lambda s: s.replace('# from django', 'from django')
+        )
+    manipFile(
+        pfile('config/urls.py'),
+        lambda s: s.replace('# admin.autodiscover()', 'admin.autodiscover()')
+        )
+    
             
     
-def setupProjectFiles():
+def OFF_setupProjectFiles():
     
     from django.core import management
     management.base.copy_helper(None, 'project', pname, pname)
@@ -206,6 +235,10 @@ def setupProjectFiles():
     os.unlink('%s/%s/__init__.py' % (pname, pname))
     
     os.rename('%s/%s/settings.py' % (pname, pname), '%s/config/settings/base.py' % pname)
+
+    # XXX: add:
+    # (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+    # For serving up MEDIA_ROOT
     os.rename('%s/%s/urls.py' % (pname, pname), '%s/config/urls.py' % pname)
     
     os.rmdir('%s/%s' % (pname, pname))
@@ -215,7 +248,7 @@ def setupProjectFiles():
     f.write('#\n')
     f.close()
 
-def manipFile(filename, method):
+def OFF_manipFile(filename, method):
     "Run supplied method over each line in the file, saving result over original file"
     f = open(filename, 'r+')
     out = []
@@ -233,6 +266,10 @@ def manipFile(filename, method):
 #############################################################################
 
 parser = OptionParser()
+
+parser.add_option("-d", "--download",
+    action="store_true", dest="download", default=False,
+    help="Download Django from djangoproject.com")
 
 parser.add_option("-u", "--unpack", 
     action="store_true", dest="unpack", default=False,
@@ -252,31 +289,200 @@ parser.add_option("-q", "--quiet",
 
 (options, args) = parser.parse_args()
 
+
+#############################################################################
+# Reworking
+#############################################################################
+
+
+URLS_PY = """from django.conf.urls.defaults import *
+
+# Uncomment the next two lines to enable the admin:
+from django.contrib import admin
+admin.autodiscover()
+
+urlpatterns = patterns('',
+    # Example:
+    # (r'^example/', include('example.foo.urls')),
+
+    # Serve up static files for development
+    (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+
+    # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
+    # to INSTALLED_APPS to enable admin documentation:
+    (r'^admin/doc/', include('django.contrib.admindocs.urls')),
+
+    # Uncomment the next line to enable the admin:
+    (r'^admin/', include(admin.site.urls)),
+)
+"""
+
+DEVELOPMENT_PY = """
+from base import *
+
+DATABASE_ENGINE = 'sqlite3'    # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+DATABASE_NAME = 'devel.db'     # Or path to database file if using sqlite3.
+
+MEDIA_URL = '/static/'
+
+MEDIA_ROOT = '{{ path }}/media/'
+
+TEMPLATE_DIRS = (
+    '{{ path }}/templates/',
+)
+
+"""
+
+DJANGO_WSGI = """
+import os, sys
+sys.path.append('/usr/local/django')
+os.environ['DJANGO_SETTINGS_MODULE'] = 'mysite.settings'
+
+import django.core.handlers.wsgi
+
+application = django.core.handlers.wsgi.WSGIHandler()
+"""
+
+APACHE_CONF = """
+Alias /media/ /usr/local/django/mysite/media/
+
+<Directory /usr/local/django/mysite/media>
+    Order deny,allow
+    Allow from all
+</Directory>
+
+WSGIScriptAlias / /usr/local/django/mysite/apache/django.wsgi
+
+<Directory /usr/local/django/mysite/apache>
+    Order deny,allow
+    Allow from all
+</Directory>
+"""
+class ProjectCustomizer(object):
+    
+    def __init__(self, path, target=None):
+        """Takes full project path"""
+        self.target = target if target != None else path
+        self.path = path
+        
+    def mapFile(self, path, mapper):
+        data = file(path, 'r').read()
+        file(path, 'w+').write(mapper(data))
+        
+    def moveFiles(self):
+        # XXX: Should probably copy the actual django templates manually instead of doing this
+        os.unlink('%s/manage.py' % self.path)
+        os.unlink('%s/__init__.py' % self.path)
+        os.unlink('%s/urls.py' % self.path)
+                
+        os.rename('%s/settings.py' % self.path, '%s/config/settings/base.py' % self.target)
+        
+        urls = open('%s/config/urls.py' % self.target, 'w')
+        urls.write(URLS_PY)
+        urls.close()
+        
+        devsettings = open('%s/config/settings/development.py' % self.target, 'w')
+        devsettings.write(DEVELOPMENT_PY.replace('{{ path }}', self.path))
+        devsettings.close()
+        
+        # Make config/settings/ a module
+        f = open( '%s/config/settings/__init__.py' % self.target, 'w')
+        f.write('#\n')
+        f.close()
+        
+    def urlconfTweak(self):
+        pass
+
+class Gig(object):
+    
+    def __init__(self, options, args):
+        self.options = options
+        self.args = args
+        self.name = os.path.basename(args[0])
+        self.path = os.path.abspath( os.path.expanduser( args[0] ) )
+        self.tree_exists = False;
+        
+    def log(self, s):
+        print s
+        
+    def mkdir(self, path):
+        self.log("Creating %s" % path)
+        try:
+            os.mkdir(path)
+        except OSError:
+            self.log("...already exists")
+    
+    def makeTree(self):
+        self.mkdir(self.name)
+        for p in ('lib', 'config', 'config/settings', 'templates', 'media', 'script'):
+            self.mkdir('%s/%s' % (self.path, p))
+        
+        self.tree_exists = True;
+    
+    def createProject(self):
+        from django.core import management
+        
+        if not self.tree_exists:
+            self.makeTree()
+        
+        
+        management.base.copy_helper(None, 'project', self.name, self.path)
+        
+        customizer = ProjectCustomizer('%s/%s' % (self.path, self.name), self.path)
+        customizer.moveFiles()
+        
+    def download(self, url):
+        pass
+
+    def installDjango(self, url):
+        pass
+        
 #############################################################################
 # The Procedural Bits
 #############################################################################
 
-pname = os.path.basename(args[0])
+gig = Gig(options, args)
+gig.createProject()
+
+MANAGE_SCRIPT = """#!/usr/bin/env python 
+# TODO: non-standard pythons installs
+import sys, os
+
+basedir = '%(basedir)s'
+sys.path[1:1] = ['%%s/config' %% basedir, '%%s/lib' %% basedir]
+
+from django.core.management import execute_manager
+
+try:
+    # FIXME: Script should be usable for production commands as well
+    from settings import development as settings
+except ImportError:
+    import sys
+    sys.stderr.write("Error: Can't import settings")
+    sys.exit(1)
+
+if __name__ == "__main__":
+    execute_manager(settings)
+""" % {'basedir': gig.path}
+
+pname = gig.name
 djver = options.django_version
 
 # FIXME: Only works when creating project in cwd!
-pdir = os.path.normpath( "%s/%s" % (os.getcwd(), pname))
+pdir = gig.path
 
-# Meh, how to get cwd?
-#pdir = os.path.normpath (os.path.split( os.path.abspath( sys.argv[0]) )[0] )
+#django_url = 'http://media.djangoproject.com/releases/%s/Django-%s-final.tar.gz' % (djver, djver)
+django_url = 'http://localhost/~tvon/Django-%s-final.tar.gz' % djver
 
 
-django_url = 'http://media.djangoproject.com/releases/%s/Django-%s-final.tar.gz' % (djver, djver)
-#django_url = 'http://localhost/~tvon/Django-%s-final.tar.gz' % djver
-
-buildTree()
-installDjagno()
+#buildTree()
+#installDjagno()
 makeManageScript()
-customizeProject()
-
+#customizeProject()
 
 # Django should be available now...
-sys.path[1:1] = [pfile('lib/')]
-import django
-setupProjectFiles()
-customizeDefaultSettings()
+#sys.path[1:1] = [pfile('lib/')]
+#import django
+#setupProjectFiles()
+#customize()
+
