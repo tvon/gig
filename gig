@@ -96,43 +96,6 @@ except ImportError:
     django = False
 
 
-#def makeManageScript(basedir):
-#    
-#    script = """#!/usr/bin/env python 
-## TODO: non-standard pythons installs
-#
-#import sys, os
-#
-## Add project-specific modules to pythonpath.
-## We have to insert it in the beginning to avoid an
-## installed Django getting picked up instead
-#basedir = os.path.normpath ( '%s/..' % os.path.split( os.path.abspath( sys.argv[0]) )[0] )
-#sys.path[1:1] = ['%s/config' % basedir, '%s/lib' % basedir]
-#
-#from django.core.management import execute_manager
-#
-#try:
-#    # TODO: import non-base config, eg 'hostname' or 'development'
-#    from settings import development as settings
-#except ImportError:
-#    import sys
-#    sys.stderr.write("Error: Can't import settings")
-#    sys.exit(1)
-#
-#if __name__ == "__main__":
-#    execute_manager(settings)
-#    """
-#    filename = '%s/script/manage.py' % basedir
-#    f = open(filename, 'w')
-#    f.write(script)
-#    f.close()
-#
-#    # Maxe executable
-#    statinfo = os.stat(filename)
-#    permissions = stat.S_IEXEC | statinfo[0]
-#    os.chmod(filename, permissions)
-    
-
 #############################################################################
 # Option Parsing
 #############################################################################
@@ -149,7 +112,6 @@ parser.add_option("-f", "--file",
 parser.add_option("-q", "--quiet",
     action="store_false", dest="verbose", default=True,
     help="don't print status messages to stdout")
-
 
 (options, args) = parser.parse_args()
 
@@ -170,11 +132,11 @@ urlpatterns = patterns('',
     # (r'^example/', include('example.foo.urls')),
 
     # Serve up static files for development
-    (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+    #(r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:
-    (r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    #(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
     # Uncomment the next line to enable the admin:
     (r'^admin/', include(admin.site.urls)),
@@ -197,31 +159,6 @@ TEMPLATE_DIRS = (
 
 """
 
-DJANGO_WSGI = """
-import os, sys
-sys.path.append('/usr/local/django')
-os.environ['DJANGO_SETTINGS_MODULE'] = 'mysite.settings'
-
-import django.core.handlers.wsgi
-
-application = django.core.handlers.wsgi.WSGIHandler()
-"""
-
-APACHE_CONF = """
-Alias /media/ /usr/local/django/mysite/media/
-
-<Directory /usr/local/django/mysite/media>
-    Order deny,allow
-    Allow from all
-</Directory>
-
-WSGIScriptAlias / /usr/local/django/mysite/apache/django.wsgi
-
-<Directory /usr/local/django/mysite/apache>
-    Order deny,allow
-    Allow from all
-</Directory>
-"""
 class Project(object):
     
     def __init__(self, path, target=None):
@@ -280,7 +217,7 @@ class GigProject(object):
     
     def makeTree(self):
         self.mkdir(self.name)
-        for p in ('app', 'config', 'config/settings', 'templates', 'media', 'media/js', 'media/img', 'media/css', 'script'):
+        for p in ('apps', 'config', 'config/settings', 'templates', 'media', 'media/js', 'media/img', 'media/css', 'script'):
             self.mkdir('%s/%s' % (self.path, p))
         
         self.tree_exists = True;
@@ -293,7 +230,7 @@ class GigProject(object):
         
         management.base.copy_helper(None, 'project', self.name, self.path)
         
-        project = Project('%s/%s' % (self.path, self.name), self.path)
+        project = Project('%s' % self.path, self.path)
         project.moveFiles()
 
     def writeFile(self, path, content):
@@ -313,7 +250,8 @@ MANAGE_SCRIPT = """#!/usr/bin/env python
 import sys, os
 
 basedir = '%(basedir)s'
-sys.path[1:1] = ['%%s/config' %% basedir, '%%s/lib' %% basedir]
+
+sys.path[1:1] = ['%%s/config' %% basedir, '%%s/apps' %% basedir, '%%s/vendor' %% basedir]
 
 from django.core.management import execute_manager
 
@@ -326,6 +264,7 @@ except ImportError:
 
 if __name__ == "__main__":
     execute_manager(settings)
+
 """ % {'basedir': gig.path}
 
 SETTINGS_INIT = """
@@ -336,10 +275,52 @@ hostname = platform.node()
 try:
     settings = __import__(hostname, globals(), locals(), [], -1)
 except:
-    print "Unable to import host-specific settings module '%s', falling back to 'base'"
+    print "Unable to import host-specific settings module '%s', falling back to 'base'" % hostname
     import base as settings
 
 """
 
+DJANGO_WSGI = """
+import os, sys
+
+basedir = '%(basedir)s'
+sys.path[1:1] = ['%%s/config' %% basedir, '%%s/apps' %% basedir, '%%s/vendor' %% basedir]
+
+os.environ['PYTHON_EGG_CACHE'] = '/var/cache/egg-cache'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings.production'
+
+import django.core.handlers.wsgi
+
+application = django.core.handlers.wsgi.WSGIHandler()
+
+""" % {'basedir': gig.path}
+
+APACHE_CONF = """
+Alias /media/ %(basedir)s/media/
+
+<Directory %(basedir)s/media>
+    Order deny,allow
+    Allow from all
+</Directory>
+
+WSGIScriptAlias / %(basedir)s/config/django.wsgi
+
+<Directory %(basedir)s/config>
+    Order deny,allow
+    Allow from all
+</Directory>
+
+""" % {'basedir': gig.path}
+
+
+
 gig.writeFile('config/settings/__init__.py', SETTINGS_INIT)
+gig.writeFile('config/django.wsgi', DJANGO_WSGI)
+gig.writeFile('config/apache.conf', APACHE_CONF)
 gig.writeFile('script/manage.py', MANAGE_SCRIPT)
+
+
+# XXX: Clean up
+statinfo = os.stat('%s/script/manage.py' % gig.path)
+permissions = stat.S_IEXEC | statinfo[0]
+os.chmod('%s/script/manage.py' % gig.path, permissions)
