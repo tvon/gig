@@ -100,18 +100,8 @@ except ImportError:
 # Option Parsing
 #############################################################################
 
+# Not currently used...
 parser = OptionParser()
-
-parser.add_option("-V", "--django-version",
-    action="store", dest="django_version", default="1.0.2",
-    help="Django version to use.  This will be downloaded. Non-version numbers will be interpreted from the django svn repository")
-
-parser.add_option("-f", "--file",
-    action="store", type="string", dest="filename")
-                
-parser.add_option("-q", "--quiet",
-    action="store_false", dest="verbose", default=True,
-    help="don't print status messages to stdout")
 
 (options, args) = parser.parse_args()
 
@@ -230,7 +220,7 @@ class GigProject(object):
         
         management.base.copy_helper(None, 'project', self.name, self.path)
         
-        project = Project('%s' % self.path, self.path)
+        project = Project('%s/%s' % (self.path, self.name), self.path)
         project.moveFiles()
 
     def writeFile(self, path, content):
