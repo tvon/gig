@@ -207,7 +207,7 @@ class GigProject(object):
     
     def makeTree(self):
         self.mkdir(self.name)
-        for p in ('apps', 'config', 'config/settings', 'templates', 'media', 'media/js', 'media/img', 'media/css', 'script'):
+        for p in ('apps', 'config', 'config/settings', 'templates', 'media', 'media/js', 'media/img', 'media/css', 'script', 'vendor'):
             self.mkdir('%s/%s' % (self.path, p))
         
         self.tree_exists = True;
