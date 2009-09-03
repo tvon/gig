@@ -7,23 +7,6 @@
 #   Using existing django install
 #   ... anything further probably warrants using zc.buidout or something like that
 """
-
-Note:
-
- Make this a "suped-up" django-admin/manage script and copy it to the script/ folder when done?  This would mean:
- * Adding a few commands, eg "app install" to install 3rd party apps into lib/
- * Perhaps allowing system-wide gig to start individual instances
- * Perhaps adding lib/gig which would include TTW based tools for managing installed apps.
- 
- 
-In short
-
-    $ curl -o gig http://github.com/tvon/gig/blah/blah
-    $ ./gig myproject
-    
-    
-XXXXXXXXXXXXXXXX
-    
 This is a script that will make a few trivial decisions for you while setting up a 
 pre-organized Django project tree.
 
@@ -36,8 +19,8 @@ on new users such as where to place templates and basic media files.
 Will create:
 
     myproject/
-        lib/
-        lib/django/
+        vendor/
+
         config/__init__.py
         config/urls.py
         config/settings/
@@ -51,7 +34,7 @@ Will create:
         
 A bit about this layout.
 
-    lib/
+    apps/
     
 This is added to PYTHONPATH, so any new apps should go in here, as well as any existing 
 django apps you might want to use
@@ -155,7 +138,7 @@ class Project(object):
         """Takes full project path"""
         self.target = target if target != None else path
         self.path = path
-        self.hostname = platform.node()
+        self.hostname = platform.node().split('.')[0]
         
     def mapFile(self, path, mapper):
         data = file(path, 'r').read()
@@ -260,7 +243,7 @@ if __name__ == "__main__":
 SETTINGS_INIT = """
 import platform
 
-hostname = platform.node()
+hostname = platform.node().split('.')[0]
 
 try:
     settings = __import__(hostname, globals(), locals(), [], -1)
