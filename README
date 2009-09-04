@@ -1,6 +1,5 @@
-This script aims at providing a simple way to bootstrap a self-contained django project.
-
-In short, it makes a few trivial decisions for you.
+This is a script that will make a few trivial decisions for you while setting up a 
+pre-organized Django project tree.
 
 To those who use the Django framework this may seem a bit unecessary, but I believe that
 it could be easier to get started with django, without having to impose minor decisions 
@@ -11,22 +10,22 @@ on new users such as where to place templates and basic media files.
 Will create:
 
     myproject/
-        lib/
-        lib/django/
+        vendor/
+
         config/__init__.py
         config/urls.py
         config/settings/
         config/settings/__init__.py
         config/settings/base.py
+        config/settings/`hostname`.py # Hostname here is taken from platform.node()
         templates/
         media/
         script/
-        script/manage
+        script/manage.py
         
-
 A bit about this layout.
 
-    lib/
+    apps/
     
 This is added to PYTHONPATH, so any new apps should go in here, as well as any existing 
 django apps you might want to use
@@ -49,25 +48,9 @@ App tempaltes.
 
     media/
     
-App media (maybe, there is that whole deal of serving this stuff up from the dev server)
+App media (maybe, there is that whole deal of )
 
-    script/manage
+    script/manage.py
     
 The usual manage.py created from `django-admin startproject`, but tweaked to deal with it's location.
 
-
-Future
-======
-
-What I'd like eventually, but you can't do now:
-
-  gig --unpack --django-version=trunk
-  # Buildout with django module from svn trunk unpacked to lib/
-  
-  gig --unpack --django-version=branches/schema-evolution
-  # As above, but with the branch
-  
-  gig --unpack --latest
-  # Fetch/unpack latest release from djangoproject.com
-  
-That's all I'm looking for really.
