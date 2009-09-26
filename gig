@@ -1,75 +1,12 @@
 #!/usr/bin/env python
-# 
-# TODO:
-#   Make 'script/manage startapp foo' buildout in the right place
-#   Should probably consider refactoring a bit.
-#   Fetch-from-svn ability
-#   Using existing django install
-#   ... anything further probably warrants using zc.buidout or something like that
-"""
-This is a script that will make a few trivial decisions for you while setting up a 
-pre-organized Django project tree.
 
-To those who use the Django framework this may seem a bit unecessary, but I believe that
-it could be easier to get started with django, without having to impose minor decisions 
-on new users such as where to place templates and basic media files.
-
-    $ gig myproject
-    
-Will create:
-
-    myproject/
-        vendor/
-
-        config/__init__.py
-        config/urls.py
-        config/settings/
-        config/settings/__init__.py
-        config/settings/base.py
-        config/settings/`hostname`.py # Hostname here is taken from platform.node()
-        templates/
-        media/
-        script/
-        script/manage.py
-        
-A bit about this layout.
-
-    apps/
-    
-This is added to PYTHONPATH, so any new apps should go in here, as well as any existing 
-django apps you might want to use
-
-    config/
-
-The project-wide config files (what `startproject` would typically generate, mostly).  Of
-note are `urls.py` and...
-
-    config/settings/
-    
-This is a module hoding `base.py`, used as the general config, and any host-specific configs.
-For example, on my home machine I might have `config/settings/home.py` with paths specific to 
-that setup, while at work I might have `config/settings/office.py`.  Or development and production
-configs, of course.  Basically the same deal as Rails environments.
-
-    templates/
-
-App tempaltes.
-
-    media/
-    
-App media (maybe, there is that whole deal of )
-
-    script/manage.py
-    
-The usual manage.py created from `django-admin startproject`, but tweaked to deal with it's location.
-
-"""
 import sys, os, stat
 import urllib
 import tarfile
 import tempfile
 import fileinput
 import platform
+from random import choice
 
 from optparse import OptionParser
 
@@ -92,11 +29,91 @@ parser = OptionParser()
 #############################################################################
 # Reworking
 #############################################################################
+BASE_SETTINGS_PY = """# Django settings for {{ name }} project.
 
+DEBUG = True
+TEMPLATE_DEBUG = DEBUG
+
+ADMINS = (
+    # ('Your Name', 'your_email@domain.com'),
+)
+
+MANAGERS = ADMINS
+
+DATABASE_ENGINE = ''           # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+DATABASE_NAME = ''             # Or path to database file if using sqlite3.
+DATABASE_USER = ''             # Not used with sqlite3.
+DATABASE_PASSWORD = ''         # Not used with sqlite3.
+DATABASE_HOST = ''             # Set to empty string for localhost. Not used with sqlite3.
+DATABASE_PORT = ''             # Set to empty string for default. Not used with sqlite3.
+
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+# although not all choices may be available on all operating systems.
+# If running in a Windows environment this must be set to the same as your
+# system time zone.
+TIME_ZONE = 'America/Chicago'
+
+# Language code for this installation. All choices can be found here:
+# http://www.i18nguy.com/unicode/language-identifiers.html
+LANGUAGE_CODE = 'en-us'
+
+SITE_ID = 1
+
+# If you set this to False, Django will make some optimizations so as not
+# to load the internationalization machinery.
+USE_I18N = True
+
+# Absolute path to the directory that holds media.
+# Example: "/home/media/media.lawrence.com/"
+MEDIA_ROOT = ''
+
+# URL that handles the media served from MEDIA_ROOT. Make sure to use a
+# trailing slash if there is a path component (optional in other cases).
+# Examples: "http://media.lawrence.com", "http://example.com/media/"
+MEDIA_URL = ''
+
+# URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
+# trailing slash.
+# Examples: "http://foo.com/media/", "/media/".
+ADMIN_MEDIA_PREFIX = '/media/'
+
+# Make this unique, and don't share it with anybody.
+SECRET_KEY = '{{ secret_key }}'
+
+# List of callables that know how to import templates from various sources.
+TEMPLATE_LOADERS = (
+    'django.template.loaders.filesystem.load_template_source',
+    'django.template.loaders.app_directories.load_template_source',
+#     'django.template.loaders.eggs.load_template_source',
+)
+
+MIDDLEWARE_CLASSES = (
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+)
+
+ROOT_URLCONF = 'urls'
+
+TEMPLATE_DIRS = (
+    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
+    # Always use forward slashes, even on Windows.
+    # Don't forget to use absolute paths, not relative paths.
+)
+
+INSTALLED_APPS = (
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.sites',
+    'django.contrib.admin',
+)
+"""
 
 URLS_PY = """from django.conf.urls.defaults import *
+from django.conf import settings
 
-# Uncomment the next two lines to enable the admin:
 from django.contrib import admin
 admin.autodiscover()
 
@@ -105,7 +122,7 @@ urlpatterns = patterns('',
     # (r'^example/', include('example.foo.urls')),
 
     # Serve up static files for development
-    #(r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+    (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:
@@ -119,8 +136,8 @@ urlpatterns = patterns('',
 DEVELOPMENT_PY = """
 from base import *
 
-DATABASE_ENGINE = 'sqlite3'    # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-DATABASE_NAME = 'devel.db'     # Or path to database file if using sqlite3.
+DATABASE_ENGINE = 'sqlite3'
+DATABASE_NAME = 'devel.db'
 
 MEDIA_URL = '/static/'
 
@@ -132,45 +149,8 @@ TEMPLATE_DIRS = (
 
 """
 
-class Project(object):
-    
-    def __init__(self, path, target=None):
-        """Takes full project path"""
-        self.target = target if target != None else path
-        self.path = path
-        self.hostname = platform.node().split('.')[0]
-        
-    def mapFile(self, path, mapper):
-        data = file(path, 'r').read()
-        file(path, 'w+').write(mapper(data))
-        
-    def moveFiles(self):
-        # XXX: this is a bit silly, should just create the files or move them
-        # from django instead of building out a project and moving them...
-        os.unlink('%s/manage.py' % self.path)
-        os.unlink('%s/__init__.py' % self.path)
-        os.unlink('%s/urls.py' % self.path)
-                
-        os.rename('%s/settings.py' % self.path, '%s/config/settings/base.py' % self.target)
-        
-        urls = open('%s/config/urls.py' % self.target, 'w')
-        urls.write(URLS_PY)
-        urls.close()
-        
-        devsettings = open('%s/config/settings/%s.py' % (self.target, self.hostname), 'w')
-        devsettings.write(DEVELOPMENT_PY.replace('{{ path }}', self.path))
-        devsettings.close()
-        
-        # Make config/settings/ a module
-        f = open( '%s/config/settings/__init__.py' % self.target, 'w')
-        f.write('#\n')
-        f.close()
-        
-    def urlconfTweak(self):
-        pass
-
 class GigProject(object):
-    
+
     def __init__(self, options, args):
         self.options = options
         self.args = args
@@ -203,8 +183,8 @@ class GigProject(object):
         
         management.base.copy_helper(None, 'project', self.name, self.path)
         
-        project = Project('%s/%s' % (self.path, self.name), self.path)
-        project.moveFiles()
+        #project = Project('%s/%s' % (self.path, self.name), self.path)
+        #project.moveFiles()
 
     def writeFile(self, path, content):
         """Write content to file represented by path, relative to project root"""
@@ -217,7 +197,8 @@ class GigProject(object):
 #############################################################################
 
 gig = GigProject(options, args)
-gig.createProject()
+gig.makeTree()
+#gig.createProject()
 
 MANAGE_SCRIPT = """#!/usr/bin/env python 
 import sys, os
@@ -243,7 +224,7 @@ if __name__ == "__main__":
 SETTINGS_INIT = """
 import platform
 
-hostname = platform.node().split('.')[0]
+hostname = platform.node().split('.')[0].replace('-', '_')
 
 try:
     settings = __import__(hostname, globals(), locals(), [], -1)
@@ -285,15 +266,19 @@ WSGIScriptAlias / %(basedir)s/config/django.wsgi
 
 """ % {'basedir': gig.path}
 
+hostname = platform.node().split('.')[0].replace('-', '_')
+secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i     in range(50)])
 
+base_settings = BASE_SETTINGS_PY.replace('{{ secret_key }}', secret_key).replace('{{ name }}', gig.name)
 
+gig.writeFile('config/settings/base.py', BASE_SETTINGS_PY)
+gig.writeFile('config/settings/%s.py' % hostname, DEVELOPMENT_PY)
 gig.writeFile('config/settings/__init__.py', SETTINGS_INIT)
+gig.writeFile('config/urls.py', URLS_PY)
 gig.writeFile('config/django.wsgi', DJANGO_WSGI)
 gig.writeFile('config/apache.conf', APACHE_CONF)
 gig.writeFile('script/manage.py', MANAGE_SCRIPT)
 
-
-# XXX: Clean up
 statinfo = os.stat('%s/script/manage.py' % gig.path)
 permissions = stat.S_IEXEC | statinfo[0]
 os.chmod('%s/script/manage.py' % gig.path, permissions)

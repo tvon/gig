@@ -22,6 +22,7 @@ Will create:
         media/
         script/
         script/manage.py
+        vendor/
         
 A bit about this layout.
 
@@ -54,3 +55,6 @@ App media (maybe, there is that whole deal of )
     
 The usual manage.py created from `django-admin startproject`, but tweaked to deal with it's location.
 
+    vendor/
+
+Any 3rd party apps or python libs for this project.
