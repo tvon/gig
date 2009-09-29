@@ -276,7 +276,7 @@ secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)
 
 base_settings = BASE_SETTINGS_PY.replace('{{ secret_key }}', secret_key).replace('{{ name }}', gig.name)
 
-gig.writeFile('config/settings/base.py', BASE_SETTINGS_PY)
+gig.writeFile('config/settings/base.py', base_settings)
 gig.writeFile('config/settings/%s.py' % hostname, DEVELOPMENT_PY)
 gig.writeFile('config/settings/__init__.py', SETTINGS_INIT)
 gig.writeFile('config/urls.py', URLS_PY)
