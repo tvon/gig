@@ -31,6 +31,10 @@ parser = OptionParser()
 #############################################################################
 BASE_SETTINGS_PY = """# Django settings for {{ name }} project.
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath('%s/../../' % __file__))
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -141,10 +145,10 @@ DATABASE_NAME = 'devel.db'
 
 MEDIA_URL = '/static/'
 
-MEDIA_ROOT = '{{ path }}/media/'
+MEDIA_ROOT = '%s/media/' % BASE_DIR
 
 TEMPLATE_DIRS = (
-    '{{ path }}/templates/',
+    '%s/templates/' % BASE_DIR,
 )
 
 """
@@ -198,7 +202,6 @@ class GigProject(object):
 
 gig = GigProject(options, args)
 gig.makeTree()
-#gig.createProject()
 
 MANAGE_SCRIPT = """#!/usr/bin/env python 
 import sys, os
@@ -267,7 +270,9 @@ WSGIScriptAlias / %(basedir)s/config/django.wsgi
 """ % {'basedir': gig.path}
 
 hostname = platform.node().split('.')[0].replace('-', '_')
-secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i     in range(50)])
+
+# Ripped from Django
+secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(50)])
 
 base_settings = BASE_SETTINGS_PY.replace('{{ secret_key }}', secret_key).replace('{{ name }}', gig.name)
 
