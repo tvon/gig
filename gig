@@ -254,6 +254,8 @@ application = django.core.handlers.wsgi.WSGIHandler()
 
 APACHE_CONF = """
 Alias /media/ %(basedir)s/media/
+Alias /robots.txt %(basedir)s/media/
+Alias /favicon.ico %(basedir)s/media/
 
 <Directory %(basedir)s/media>
     Order deny,allow
