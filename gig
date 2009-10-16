@@ -288,6 +288,11 @@ def apache(command):
 def memcached(command):
     sudo("/etc/init.d/memcached %s" % command, shell=False)
 
+def django(command):
+    run("%s/script/manage.py %s" % (remote_path, command))
+
+def uptime():
+    run("uptime")
 """
 
 hostname = platform.node().split('.')[0].replace('-', '_')
