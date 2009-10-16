@@ -125,16 +125,14 @@ urlpatterns = patterns('',
     # Example:
     # (r'^example/', include('example.foo.urls')),
 
-    # Serve up static files for development
-    (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
-
-    # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
-    # to INSTALLED_APPS to enable admin documentation:
     #(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
     (r'^admin/', include(admin.site.urls)),
 )
+
+if settings.DEBUG:
+    # Serve up static files for development
+    urlpatterns += patterns((r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}))
+
 """
 
 DEVELOPMENT_PY = """
@@ -203,12 +201,12 @@ class GigProject(object):
 gig = GigProject(options, args)
 gig.makeTree()
 
-MANAGE_SCRIPT = """#!/usr/bin/env python 
+MANAGE_PY = """#!/usr/bin/env python 
 import sys, os
 
-basedir = '%(basedir)s'
+BASE_DIR = os.path.dirname(os.path.abspath('%s/../' % __file__))
 
-sys.path[1:1] = ['%%s/config' %% basedir, '%%s/apps' %% basedir, '%%s/vendor' %% basedir]
+sys.path[1:1] = ['%s/config' % BASE_DIR, '%s/apps' % BASE_DIR, '%s/vendor' % BASE_DIR]
 
 from django.core.management import execute_manager
 
@@ -222,7 +220,7 @@ except ImportError:
 if __name__ == "__main__":
     execute_manager(settings)
 
-""" % {'basedir': gig.path}
+"""
 
 SETTINGS_INIT = """
 import platform
@@ -271,6 +269,27 @@ WSGIScriptAlias / %(basedir)s/config/django.wsgi
 
 """ % {'basedir': gig.path}
 
+FABFILE_PY = """from fabric.api import env, run, sudo, prompt
+
+env.hosts = ['user@remotehost']
+
+remote_path = '/home/user/app'
+
+def deploy():
+    svn('update')
+    apache('reload')
+
+def svn(command):
+    run("cd %s && svn %s" % (remotepath, command))
+
+def apache(command):
+    sudo("/etc/init.d/apache2 %s" % command, shell=False)
+
+def memcached(command):
+    sudo("/etc/init.d/memcached %s" % command, shell=False)
+
+"""
+
 hostname = platform.node().split('.')[0].replace('-', '_')
 
 # Ripped from Django
@@ -278,13 +297,14 @@ secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)
 
 base_settings = BASE_SETTINGS_PY.replace('{{ secret_key }}', secret_key).replace('{{ name }}', gig.name)
 
-gig.writeFile('config/settings/base.py', BASE_SETTINGS_PY)
+gig.writeFile('config/settings/base.py', base_settings)
 gig.writeFile('config/settings/%s.py' % hostname, DEVELOPMENT_PY)
 gig.writeFile('config/settings/__init__.py', SETTINGS_INIT)
 gig.writeFile('config/urls.py', URLS_PY)
 gig.writeFile('config/django.wsgi', DJANGO_WSGI)
 gig.writeFile('config/apache.conf', APACHE_CONF)
-gig.writeFile('script/manage.py', MANAGE_SCRIPT)
+gig.writeFile('script/manage.py', MANAGE_PY)
+gig.writeFile('fabfile.py', FABFILE_PY)
 
 statinfo = os.stat('%s/script/manage.py' % gig.path)
 permissions = stat.S_IEXEC | statinfo[0]
