@@ -1,60 +1,31 @@
-This is a script that will make a few trivial decisions for you while setting up a 
-pre-organized Django project tree.
+A script to quicken the whole Django bootstrap process.
 
-To those who use the Django framework this may seem a bit unecessary, but I believe that
-it could be easier to get started with django, without having to impose minor decisions 
-on new users such as where to place templates and basic media files.
+Usage:
 
-    $ gig myproject
-    
-Will create:
+    $ gig projectname
 
-    myproject/
-        vendor/
 
-        config/__init__.py
-        config/urls.py
-        config/settings/
-        config/settings/__init__.py
-        config/settings/base.py
-        config/settings/`hostname`.py # Hostname here is taken from platform.node()
-        templates/
-        media/
-        script/
-        script/manage.py
-        vendor/
-        
-A bit about this layout.
+What it does:
 
-    apps/
-    
-This is added to PYTHONPATH, so any new apps should go in here, as well as any existing 
-django apps you might want to use
+* Picks what I think is a convenient directory structure.  This requries
+  tweaking a few scripts but it keeps things organized.  Basically it breaks down to:
 
-    config/
+  configs/urls.py     # main urls.py
+  configs/settings/   # settings!  Put your host-specific settings in `hostname`.py, eg if your host is
+                      # foobar.example.com, the file would be foobar.py.  This is primarily to ease deployment
+                      # and development across multiple hosts.  All base settings (eg, installed apps) go in 
+                      # the base.py file, this should be imported by your host specific settings (one shoudl be
+                      # generated for you, by the way)
+  scripts/manage.py   # your standard manage.py script tweaked for this directory setup.
+  vendor/             # Added to pythonpath, put any apps specific to this site here.
+  media/              # MEDIA_ROOT points here by default in the base settings file.
+  templates/          # Added to template dirs
 
-The project-wide config files (what `startproject` would typically generate, mostly).  Of
-note are `urls.py` and...
-
-    config/settings/
-    
-This is a module hoding `base.py`, used as the general config, and any host-specific configs.
-For example, on my home machine I might have `config/settings/home.py` with paths specific to 
-that setup, while at work I might have `config/settings/office.py`.  Or development and production
-configs, of course.  Basically the same deal as Rails environments.
-
-    templates/
-
-App tempaltes.
-
-    media/
-    
-App media (maybe, there is that whole deal of )
-
-    script/manage.py
-    
-The usual manage.py created from `django-admin startproject`, but tweaked to deal with it's location.
-
-    vendor/
-
-Any 3rd party apps or python libs for this project.
+* Adjusts settings so you can immediately run 'script/manage.py syncdb' and
+  'script/manage.py runserver' to get rolling.  This basically just means it
+  sets up a sqlite3 database by default.
+* Enables admin app.  I use this 99% of the time so it's enabled by default.
+* Provides probably-working WSGI and Apache configs.
+* Provides a needs-some-tweaks fabfile.py
+* Creates media/{css|img|js} and templates/ directories, because you're gonna
+  need em so why not make them now?
