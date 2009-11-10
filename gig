@@ -56,7 +56,7 @@ DATABASE_PORT = ''             # Set to empty string for default. Not used with 
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = 'America/Chicago'
+TIME_ZONE = 'UTC'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -225,14 +225,22 @@ if __name__ == "__main__":
 SETTINGS_INIT = """
 import platform
 
+production = ('production_hostname',)
+
 hostname = platform.node().split('.')[0].replace('-', '_')
 
 try:
-    settings = __import__(hostname, globals(), locals(), [], -1)
-except:
+    if hostname in production:
+        settings = __import__('production', globals(), locals(), [], -1) 
+    else:
+        try:
+            settings = __import__(hostname, globals(), locals(), [], -1)
+        except ImportError:
+            print "No host config found, trying 'local'"
+            settings = __import__('local', globals(), locals(), [], -1)
+except ImportError:
     print "Unable to import host-specific settings module '%s', falling back to 'base'" % hostname
     import base as settings
-
 """
 
 DJANGO_WSGI = """
