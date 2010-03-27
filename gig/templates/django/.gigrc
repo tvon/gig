@@ -1,0 +1,11 @@
+[Template Data]
+name: Django project template
+description: A basic Django project buildout with a few nicities.
+post_install_notes: Run syncdb and you should be good to go with an admin
+    interface and an otherwise empty site.
+    
+    If you're content with a user/pass of admin/admin, run this:
+    
+    cd %(gig_project_home)s && \
+        script/manage.py syncdb --noinput && \
+        script/manage.py loaddata initial.json

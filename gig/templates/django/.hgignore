@@ -1,0 +1,6 @@
+syntax: glob
+
+.gitignore
+*.py[o|c]
+.git
+.svn
