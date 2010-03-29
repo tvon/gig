@@ -4,11 +4,24 @@ import os, sys
 sys.stdout = sys.stderr
 
 basedir = '{{ GIG_PROJECT_HOME }}'
-sys.path[1:1] = ['%s/config' % basedir, '%s/app' % basedir, '%s/lib' % basedir]
 
-# TODO: This is rather os-dependant
-os.environ['PYTHON_EGG_CACHE'] = '/var/cache/egg-cache'
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings.production'
+for dir in ['config', 'app', 'lib']:
+    sys.path.insert(0, '%s/%s' % (basedir, dir))
+
+# This gives us the proper hostname settings config
+from settings import settings
+
+import django.core.management
+django.core.management.setup_environ(settings)
+utility = django.core.management.ManagementUtility()
+command = utility.fetch_command('runserver')
+
+command.validate()
+
+import django.conf
+import django.utils
+
+django.utils.translation.activate(django.conf.settings.LANGUAGE_CODE)
 
 import django.core.handlers.wsgi
 
