@@ -1,0 +1,11 @@
+body {
+    background: #fcfcfc;
+    color: #000;
+}
+
+#page {
+    width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1em;
+}
