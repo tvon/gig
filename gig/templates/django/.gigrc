@@ -10,7 +10,6 @@ post_install_notes: Run syncdb and you should be good to go with an admin
     |    script/manage.py syncdb --noinput && \
     |    script/manage.py loaddata initial.json
     |
-    |
     |Now start the server
     | 
     |    script/manage.py runserver
