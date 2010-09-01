@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 from ConfigParser import ConfigParser
 from optparse import make_option
 
@@ -135,8 +136,10 @@ class Command(BaseCommand):
             config.read(gigrc)
             if config.has_section('Template Data'):
                 if config.has_option('Template Data', 'post_install_notes'):
+                    notes = config.get('Template Data', 'post_install_notes')
                     print ''
-                    print config.get('Template Data', 'post_install_notes')
+                    for line in notes.split('\n'):
+                        print re.sub(r'^\|', '', line)
                     print ''
         else:
             print "Does Not Exist: %s" % os.path.join(self.template_dir, self.template, '.gigrc')
