@@ -82,6 +82,3 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.admin',
 )
-
-if DEBUG:
-    from debug import *
