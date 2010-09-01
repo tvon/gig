@@ -9,5 +9,5 @@ post_install_notes: Run syncdb and you should be good to go with an admin
     cd %(gig_project_home)s && \
         script/manage.py syncdb --noinput && \
         script/manage.py loaddata initial.json
-
-    You should now be able to login to the admin with user admin and password admin
+    
+        script/manage.py runserver
