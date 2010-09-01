@@ -139,4 +139,4 @@ class Command(BaseCommand):
                     print config.get('Template Data', 'post_install_notes')
                     print ''
         else:
-            print "Does NOt Exist: %s" % os.path.join(self.template_dir, self.template, '.gigrc')
+            print "Does Not Exist: %s" % os.path.join(self.template_dir, self.template, '.gigrc')
