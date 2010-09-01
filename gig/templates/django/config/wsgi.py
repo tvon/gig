@@ -1,12 +1,10 @@
 import os, sys
 
+PROJECT_HOME = os.path.dirname(os.path.abspath('%s/../' % __file__))
+sys.path[1:1] = ['%s/config' % PROJECT_HOME, '%s/app' % PROJECT_HOME, '%s/lib' % PROJECT_HOME]
+
 # TODO: is this a good idea?
 sys.stdout = sys.stderr
-
-basedir = '{{ GIG_PROJECT_HOME }}'
-
-for dir in ['config', 'app', 'lib']:
-    sys.path.insert(0, '%s/%s' % (basedir, dir))
 
 # This gives us the proper hostname settings config
 from settings import settings
