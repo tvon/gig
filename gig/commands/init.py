@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+from random import choice
 from ConfigParser import ConfigParser
 from optparse import make_option
 
@@ -129,6 +130,15 @@ class Command(BaseCommand):
         name = args[0]
         copy_helper(os.path.join(self.template_dir, self.template), os.path.abspath(name), name)
 
+        # XXX DJANGO SPECIFIC - Create new SECRET_KEY
+        main_settings_file = os.path.join(os.path.abspath(name), 'config', 'settings', 'base.py')
+        settings_contents = open(main_settings_file, 'r').read()
+        fp = open(main_settings_file, 'w')
+        secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(50)])
+        settings_contents = re.sub(r"(?<=SECRET_KEY = ')'", secret_key + "'", settings_contents)
+        fp.write(settings_contents)
+        fp.close()
+        
         gigrc = os.path.join(self.template_dir, self.template, '.gigrc')
         gigrc_defaults = {'gig_project_home': os.path.abspath(name), 'gig_project_name': name}
         if os.path.exists(gigrc):
