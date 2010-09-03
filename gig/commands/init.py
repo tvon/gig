@@ -1,6 +1,8 @@
 import sys
 import os
 import re
+import shutil
+import stat
 from optparse import make_option
 
 import gig
@@ -8,7 +10,6 @@ from gig.base import BaseCommand, LabelCommand, CommandError
 
 
 def copy_helper(template_dir, dest, name, omit=[]):
-    # app_or_project, name, directory, template,other_name=''):
     """
     Copies a `template_dir` directory tree to `dest`/`name`
     
@@ -19,8 +20,6 @@ def copy_helper(template_dir, dest, name, omit=[]):
     # directory -- The directory to which the layout template should be copied.
     # other_name -- When copying an application layout, this should be the name
     #               of the project.
-    import re
-    import shutil
     if not re.search(r'^[_a-zA-Z-]\w*$', name): # If it's not a valid directory name.
         # Provide a smart error message, depending on the error.
         if not re.search(r'^[_a-zA-Z-]', name):
@@ -69,12 +68,12 @@ def copy_helper(template_dir, dest, name, omit=[]):
             except OSError:
                 sys.stderr.write("Notice: Couldn't set permission bits on %s. You're probably using an uncommon filesystem setup. No problem.\n" % path_new)
 
+
 def _make_writeable(filename):
     """ 
     Make sure that the file is writeable. Useful if our source is
     read-only.
     """
-    import stat
     if sys.platform.startswith('java'):
         # On Jython there is no os.access()
         return
@@ -104,8 +103,25 @@ class Command(BaseCommand):
 
     def handle_list(self):
         templates = self.get_templates()
-        for t in templates:
-            print t
+        for template in templates:
+            try:
+                # XXX Kinda messy...
+                newpath = os.path.join(self.template_dir, template)
+                sys.path.append(newpath)
+                
+                import gighooks
+                
+                print '%s - %s' % (template, gighooks.name)
+                print '\t', gighooks.description
+                
+                # restore sys.path
+                sys.path = sys.path[:-1]
+                
+                # delete import reference XXX: is this the right way to do this?
+                del gighooks
+                
+            except:
+                print template
 
     def handle(self, *args, **options):
 
@@ -130,7 +146,6 @@ class Command(BaseCommand):
         template_path = os.path.join(self.template_dir, self.template)
         target_path = os.path.abspath(name)
         copy_helper(template_path, target_path, name, omit=['gighooks.py',])
-        print "\n"
 
         # Adding our template to the path so we can import gighooks.
         # Honestly not sure this is the best way to do it, but....
@@ -138,9 +153,11 @@ class Command(BaseCommand):
 
         try:
             import gighooks
+            
             # XXX Should error check the existance of these things
             gighooks.post_build(target_path)
             # Other info to pass here?
+            print "\n"
             print gighooks.notes % {'target_path': target_path}
         except ImportError:
             print "No setup hooks found, template build assumed to be complate."
