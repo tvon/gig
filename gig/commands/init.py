@@ -1,15 +1,13 @@
 import sys
 import os
 import re
-from random import choice
-from ConfigParser import ConfigParser
 from optparse import make_option
 
 import gig
 from gig.base import BaseCommand, LabelCommand, CommandError
 
 
-def copy_helper(template_dir, dest, name):
+def copy_helper(template_dir, dest, name, omit=[]):
     # app_or_project, name, directory, template,other_name=''):
     """
     Copies a `template_dir` directory tree to `dest`/`name`
@@ -53,8 +51,8 @@ def copy_helper(template_dir, dest, name):
 
         for f in files:
 
-            # A dummy file so we can have empty directories in git/hg
-            if f == '.empty':
+            # Ignore dummy files (used to have empty directories in hg/git) and anything we're omitting
+            if f in ['.empty'] + omit:
                 continue
 
             path_old = os.path.join(d, f)
@@ -128,28 +126,21 @@ class Command(BaseCommand):
             sys.exit(1)
 
         name = args[0]
-        copy_helper(os.path.join(self.template_dir, self.template), os.path.abspath(name), name)
-
-        # XXX DJANGO SPECIFIC - Create new SECRET_KEY
-        main_settings_file = os.path.join(os.path.abspath(name), 'config', 'settings', 'base.py')
-        settings_contents = open(main_settings_file, 'r').read()
-        fp = open(main_settings_file, 'w')
-        secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(50)])
-        settings_contents = re.sub(r"(?<=SECRET_KEY = ')'", secret_key + "'", settings_contents)
-        fp.write(settings_contents)
-        fp.close()
         
-        gigrc = os.path.join(self.template_dir, self.template, '.gigrc')
-        gigrc_defaults = {'gig_project_home': os.path.abspath(name), 'gig_project_name': name}
-        if os.path.exists(gigrc):
-            config = ConfigParser(gigrc_defaults)
-            config.read(gigrc)
-            if config.has_section('Template Data'):
-                if config.has_option('Template Data', 'post_install_notes'):
-                    notes = config.get('Template Data', 'post_install_notes')
-                    print ''
-                    for line in notes.split('\n'):
-                        print re.sub(r'^\|', '', line)
-                    print ''
-        else:
-            print "Does Not Exist: %s" % os.path.join(self.template_dir, self.template, '.gigrc')
+        template_path = os.path.join(self.template_dir, self.template)
+        target_path = os.path.abspath(name)
+        copy_helper(template_path, target_path, name, omit=['gighooks.py',])
+        print "\n"
+
+        # Adding our template to the path so we can import gighooks.
+        # Honestly not sure this is the best way to do it, but....
+        sys.path.append(template_path)
+
+        try:
+            import gighooks
+            # XXX Should error check the existance of these things
+            gighooks.post_build(target_path)
+            # Other info to pass here?
+            print gighooks.notes % {'target_path': target_path}
+        except ImportError:
+            print "No setup hooks found, template build assumed to be complate."
