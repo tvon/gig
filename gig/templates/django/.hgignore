@@ -1,5 +1,6 @@
 syntax: glob
 
+config/settings/local.py
 .gitignore
 *.py[o|c]
 .git
