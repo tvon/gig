@@ -117,7 +117,8 @@ class Command(BaseCommand):
                 # restore sys.path
                 sys.path = sys.path[:-1]
                 
-                # delete import reference XXX: is this the right way to do this?
+                # XXX: is this the right way to do this?
+                # delete import reference 
                 del gighooks
                 
             except:
