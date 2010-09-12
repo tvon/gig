@@ -1,7 +1,11 @@
 from base import *
 
-DATABASE_ENGINE = 'sqlite3'
-DATABASE_NAME = 'devel.db'
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'devel.db',
+    }
+}
 
 MEDIA_URL = '/static/'
 
