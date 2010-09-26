@@ -6,6 +6,8 @@ name = 'Django project template'
 description = 'A basic Django project buildout with a few nicities.'
 
 notes = """
+*** Install django-debug-toolbar ***
+
 Run syncdb and you should be good to go with an admin
 interface and an otherwise empty site.
 
@@ -22,6 +24,7 @@ Now start the server
 """
 
 def post_build(path):
+    """Set a secret key"""
     main_settings_file = os.path.join(path, 'config', 'settings', 'base.py')
     settings_contents = open(main_settings_file, 'r').read()
     fp = open(main_settings_file, 'w')

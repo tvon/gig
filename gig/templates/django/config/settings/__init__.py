@@ -1,6 +1,7 @@
 import sys
 import platform
 
+# This is crap and not really used... and stupid, since we're setup for multiple production hosts, not just one
 production = ('app.example.com',)
 
 hostname = platform.node().split('.')[0].replace('-', '_')
