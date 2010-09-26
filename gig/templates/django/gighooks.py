@@ -6,7 +6,7 @@ name = 'Django project template'
 description = 'A basic Django project buildout with a few nicities.'
 
 notes = """
-*** Install django-debug-toolbar ***
+*** Install django-debug-toolbar and django-extensions ***
 
 Run syncdb and you should be good to go with an admin
 interface and an otherwise empty site.
