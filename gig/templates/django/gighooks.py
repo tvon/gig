@@ -15,12 +15,12 @@ If you're content with a user/pass of admin/admin, run this:
 
     cd %(target_path)s && \\
         script/manage.py syncdb --noinput && \\
-        script/manage.py loaddata initial.json
+        script/manage.py loaddata fixtures/initial.json
 
 Now start the server
 
     script/manage.py runserver
-    
+
 """
 
 def post_build(path):
