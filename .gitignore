@@ -2,5 +2,5 @@
 .hgignore
 build/
 .DS_Store
-#.pyc
+*.pyc
 *.pyo
