@@ -1,0 +1,10 @@
+# This would normally be a .py file, but we dont' want the runner to run it.
+
+requirements = "fake-package"
+
+def setup(project):
+    """
+    This should create foo/bar/test.txt with contents 'testing'
+    """
+    
+    project.mkdir('foo').mkdir('bar').mkfile('test.txt', 'testing')

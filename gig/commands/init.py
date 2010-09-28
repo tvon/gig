@@ -6,6 +6,7 @@ import stat
 from optparse import make_option
 
 import gig
+from gig.utils import _make_writeable
 from gig.base import BaseCommand, LabelCommand, CommandError
 
 
@@ -67,20 +68,6 @@ def copy_helper(template_dir, dest, name, omit=[]):
                 _make_writeable(path_new)
             except OSError:
                 sys.stderr.write("Notice: Couldn't set permission bits on %s. You're probably using an uncommon filesystem setup. No problem.\n" % path_new)
-
-
-def _make_writeable(filename):
-    """ 
-    Make sure that the file is writeable. Useful if our source is
-    read-only.
-    """
-    if sys.platform.startswith('java'):
-        # On Jython there is no os.access()
-        return
-    if not os.access(filename, os.W_OK):
-        st = os.stat(filename)
-        new_permissions = stat.S_IMODE(st.st_mode) | stat.S_IWUSR
-        os.chmod(filename, new_permissions)
 
 
 class Command(BaseCommand):

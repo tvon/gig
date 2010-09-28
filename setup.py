@@ -4,6 +4,8 @@ import sys, os
 from distutils.core import setup
 from distutils.command.install_data import install_data
 
+from disttest import test
+
 # Pulled from Django setup.py circa django 1.2
 class osx_install_data(install_data):
     # On MacOS, the platform-specific lib dir is /System/Library/Framework/Python/.../
@@ -23,6 +25,9 @@ if sys.platform == "darwin":
 else: 
     cmdclasses = {'install_data': install_data} 
 
+# Add disttest.test command
+cmdclasses['test'] = test
+
 data_files = []
 for dirpath, dirnames, filenames in os.walk('gig'):
     # Ignore dirnames that start with '.'
@@ -34,12 +39,17 @@ for dirpath, dirnames, filenames in os.walk('gig'):
 
 setup(name='Gig',
         version='0.1',
-        description='Python project management',
+        description='A tool for bootstrapping python projects',
         author='Tom von Schwerdtner',
         author_email='tomvons@gmail.com',
-        url='http://www.bitbucket.org/tvon/gig/',
+        url='http://www.github.com/tvon/gig/',
         packages=['gig', 'gig.commands'],
         scripts=['script/gig',],
-        cmdclass = cmdclasses,
+        cmdclass=cmdclasses,
         data_files=data_files,
-        )
+        options = {
+            'test': {
+                'test_dir':['gig/tests'], # will run all .py files in the tests/ directory
+            }
+        }
+    )
