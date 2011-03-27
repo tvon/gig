@@ -6,10 +6,12 @@ name = 'Django project template'
 description = 'A basic Django project buildout with a few nicities.'
 
 notes = """
-*** Install django-debug-toolbar and django-extensions ***
-
 Run syncdb and you should be good to go with an admin
 interface and an otherwise empty site.
+
+To setup the environment, run:
+
+    pip install -U -r %(target_path)s/requirements.txt
 
 If you're content with a user/pass of admin/admin, run this:
 
@@ -17,7 +19,7 @@ If you're content with a user/pass of admin/admin, run this:
         script/manage.py syncdb --noinput && \\
         script/manage.py loaddata fixtures/initial.json
 
-Now start the server
+Start the server with:
 
     script/manage.py runserver
 
